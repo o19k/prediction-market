@@ -34,17 +34,16 @@ jobs:
         shell: bash
         run: |
           git remote get-url upstream || git remote add upstream https://github.com/kuestcom/prediction-market.git
-          git fetch upstream main
-          UPSTREAM_HASH=$(git rev-parse upstream/main)
+          git fetch upstream main:refs/remotes/upstream/main
           if git diff --quiet HEAD upstream/main -- . ':(exclude).github/workflows/**'; then
             echo "Already synced with upstream outside .github/workflows. Skipping."
             exit 0
           fi
           echo "Syncing with upstream..."
+          UPSTREAM_HASH=$(git rev-parse upstream/main)
           LATEST_COMMIT_MSG=$(git log upstream/main -1 --pretty=format:"%s")
           git diff --binary HEAD upstream/main -- . ':(exclude).github/workflows/**' | git apply --index
           git commit \
-            -m "chore: sync fork with upstream" \
-            -m "Upstream: $UPSTREAM_HASH" \
-            -m "Latest upstream commit: $LATEST_COMMIT_MSG"
+            -m "$LATEST_COMMIT_MSG" \
+            -m "Upstream: $UPSTREAM_HASH"
           git push origin HEAD:main
