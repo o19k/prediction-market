@@ -23,11 +23,19 @@ export async function generateMetadata({ params }: PageProps<'/[locale]/event/[s
   if (slug === STATIC_PARAMS_PLACEHOLDER || market === STATIC_PARAMS_PLACEHOLDER) {
     notFound()
   }
-  return await buildEventPageMetadata({
-    eventSlug: slug,
-    locale: resolvedLocale,
-    marketSlug: market,
-  })
+  try {
+    return await buildEventPageMetadata({
+      eventSlug: slug,
+      locale: resolvedLocale,
+      marketSlug: market,
+    })
+  }
+  catch (error) {
+    console.error('Failed to generate event market page metadata.', error)
+    return {
+      title: `${slug.replace(/-/g, ' ')} | ${market.replace(/-/g, ' ')}`,
+    }
+  }
 }
 
 async function CachedEventMarketPageContent({

@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 import type { SupportedLocale } from '@/i18n/locales'
 import { getExtracted, setRequestLocale } from 'next-intl/server'
+import PlatformAuthRequiredState from '@/app/[locale]/(platform)/_components/PlatformAuthRequiredState'
 import SettingsAffiliateContent from '@/app/[locale]/(platform)/settings/_components/SettingsAffiliateContent'
+import SectionErrorBoundary from '@/components/SectionErrorBoundary'
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from '@/i18n/locales'
 import { getAffiliateFeeSettings } from '@/lib/affiliate-fee-settings'
 import { baseUnitsToNumber, fetchFeeReceiverTotals, sumFeeTotals, sumFeeVolumes } from '@/lib/data-api/fees'
@@ -9,6 +11,7 @@ import { AffiliateRepository } from '@/lib/db/queries/affiliate'
 import { SettingsRepository } from '@/lib/db/queries/settings'
 import { TagRepository } from '@/lib/db/queries/tag'
 import { UserRepository } from '@/lib/db/queries/user'
+import resolveSiteUrl from '@/lib/site-url'
 import { getPublicAssetUrl } from '@/lib/storage'
 
 export async function generateMetadata({ params }: PageProps<'/[locale]/settings/affiliate'>): Promise<Metadata> {
@@ -31,6 +34,15 @@ export default async function AffiliateSettingsPage({ params }: PageProps<'/[loc
   const t = await getExtracted()
 
   const user = await UserRepository.getCurrentUser({ disableCookieCache: true })
+  if (!user) {
+    return (
+      <PlatformAuthRequiredState
+        title={t('Sign in to manage affiliate settings.')}
+        description={t('Referral links, payouts, and affiliate reporting will be available here after you log in again.')}
+      />
+    )
+  }
+
   const affiliateCode = user.affiliate_code
   const receiverAddress = user.deposit_wallet_address ?? user.address
 
@@ -70,15 +82,9 @@ export default async function AffiliateSettingsPage({ params }: PageProps<'/[loc
 
   const commissionPercent = Number(affiliateFeeSettings.builderTakerFeeBps * affiliateFeeSettings.affiliateShareBps) / 1000000
 
-  function resolveBaseUrl() {
-    const raw = process.env.SITE_URL!
-
-    return raw.startsWith('http') ? raw : `https://${raw}`
-  }
-
   const affiliateData = affiliateCode
     ? {
-        referralUrl: `${resolveBaseUrl()}/r/${affiliateCode}`,
+        referralUrl: `${resolveSiteUrl(process.env)}/r/${affiliateCode}`,
         commissionPercent,
         stats: {
           total_referrals: Number(statsData?.total_referrals ?? 0),
@@ -115,13 +121,18 @@ export default async function AffiliateSettingsPage({ params }: PageProps<'/[loc
       </div>
 
       <div className="mx-auto w-full max-w-5xl lg:mx-0">
-        <SettingsAffiliateContent
-          affiliateData={affiliateData}
-          mainCategories={(mainTags ?? []).map(tag => ({
-            slug: tag.slug,
-            name: tag.name,
-          }))}
-        />
+        <SectionErrorBoundary
+          title={t('Affiliate settings are temporarily unavailable.')}
+          description={t('Try again in a moment without leaving this page.')}
+        >
+          <SettingsAffiliateContent
+            affiliateData={affiliateData}
+            mainCategories={(mainTags ?? []).map(tag => ({
+              slug: tag.slug,
+              name: tag.name,
+            }))}
+          />
+        </SectionErrorBoundary>
       </div>
     </section>
   )

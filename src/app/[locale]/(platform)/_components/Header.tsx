@@ -2,6 +2,7 @@ import HeaderMenu from '@/app/[locale]/(platform)/_components/HeaderMenu'
 import HeaderSearch from '@/app/[locale]/(platform)/_components/HeaderSearch'
 import HowItWorksDeferred from '@/app/[locale]/(platform)/_components/HowItWorksDeferred'
 import HeaderLogo from '@/components/HeaderLogo'
+import SectionErrorBoundary from '@/components/SectionErrorBoundary'
 import { cn } from '@/lib/utils'
 
 export default async function Header() {
@@ -19,9 +20,15 @@ export default async function Header() {
           <HowItWorksDeferred />
         </div>
         <div className="min-w-0 shrink md:min-w-fit md:shrink-0">
-          <div className="flex min-w-0 items-center gap-2">
-            <HeaderMenu />
-          </div>
+          <SectionErrorBoundary
+            title="Account controls unavailable"
+            description="The wallet and account controls hit a temporary error. Try again without leaving the page."
+            className="max-w-sm"
+          >
+            <div className="flex min-w-0 items-center gap-2">
+              <HeaderMenu />
+            </div>
+          </SectionErrorBoundary>
         </div>
       </div>
     </header>

@@ -5,6 +5,7 @@ import PortfolioMarketsWonCard from '@/app/[locale]/(platform)/portfolio/_compon
 import PortfolioTabs from '@/app/[locale]/(platform)/portfolio/_components/PortfolioTabs'
 import PortfolioWalletActions from '@/app/[locale]/(platform)/portfolio/_components/PortfolioWalletActions'
 import PublicProfileHeroCards from '@/app/[locale]/(platform)/profile/_components/PublicProfileHeroCards'
+import SectionErrorBoundary from '@/components/SectionErrorBoundary'
 import { UserRepository } from '@/lib/db/queries/user'
 import { fetchPortfolioSnapshot } from '@/lib/portfolio'
 
@@ -31,22 +32,37 @@ export default async function PortfolioPage({ params }: PageProps<'/[locale]/por
 
   return (
     <>
-      <PublicProfileHeroCards
-        profile={{
-          username: user?.username ?? 'Your portfolio',
-          avatarUrl: user?.image ?? '',
-          joinedAt: (user as any)?.created_at?.toString?.() ?? (user as any)?.createdAt?.toString?.(),
-          portfolioAddress: publicAddress ?? undefined,
-        }}
-        snapshot={snapshot}
-        actions={<PortfolioWalletActions />}
-        variant="portfolio"
-        fallbackChartEndDate={fallbackChartEndDate}
-      />
+      <SectionErrorBoundary
+        title="Portfolio summary unavailable"
+        description="The top-level portfolio metrics hit a temporary error. Try again without leaving this page."
+      >
+        <PublicProfileHeroCards
+          profile={{
+            username: user?.username ?? 'Your portfolio',
+            avatarUrl: user?.image ?? '',
+            joinedAt: (user as any)?.created_at?.toString?.() ?? (user as any)?.createdAt?.toString?.(),
+            portfolioAddress: publicAddress ?? undefined,
+          }}
+          snapshot={snapshot}
+          actions={<PortfolioWalletActions />}
+          variant="portfolio"
+          fallbackChartEndDate={fallbackChartEndDate}
+        />
+      </SectionErrorBoundary>
 
-      <PortfolioMarketsWonCard depositWalletAddress={publicAddress} />
+      <SectionErrorBoundary
+        title="Claimable markets unavailable"
+        description="The claimable positions block hit a temporary error. Try again without leaving this page."
+      >
+        <PortfolioMarketsWonCard depositWalletAddress={publicAddress} />
+      </SectionErrorBoundary>
 
-      <PortfolioTabs userAddress={userAddress} />
+      <SectionErrorBoundary
+        title="Portfolio positions unavailable"
+        description="Positions, open orders, or history hit a temporary error. Try again without leaving this page."
+      >
+        <PortfolioTabs userAddress={userAddress} />
+      </SectionErrorBoundary>
     </>
   )
 }

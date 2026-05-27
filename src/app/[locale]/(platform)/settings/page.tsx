@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import { getExtracted, setRequestLocale } from 'next-intl/server'
-import { notFound } from 'next/navigation'
+import PlatformAuthRequiredState from '@/app/[locale]/(platform)/_components/PlatformAuthRequiredState'
 import SettingsProfilePanel from '@/app/[locale]/(platform)/settings/_components/SettingsProfilePanel'
+import SectionErrorBoundary from '@/components/SectionErrorBoundary'
 import { UserRepository } from '@/lib/db/queries/user'
 
 export async function generateMetadata({ params }: PageProps<'/[locale]/settings'>): Promise<Metadata> {
@@ -22,7 +23,12 @@ export default async function SettingsPage({ params }: PageProps<'/[locale]/sett
 
   const user = await UserRepository.getCurrentUser({ disableCookieCache: true })
   if (!user) {
-    notFound()
+    return (
+      <PlatformAuthRequiredState
+        title={t('Sign in to manage your profile.')}
+        description={t('Your account settings stay available here once you log in again.')}
+      />
+    )
   }
 
   return (
@@ -34,7 +40,12 @@ export default async function SettingsPage({ params }: PageProps<'/[locale]/sett
         </p>
       </div>
 
-      <SettingsProfilePanel user={user} />
+      <SectionErrorBoundary
+        title={t('Profile settings are temporarily unavailable.')}
+        description={t('Try again in a moment without leaving the page.')}
+      >
+        <SettingsProfilePanel user={user} />
+      </SectionErrorBoundary>
     </section>
   )
 }

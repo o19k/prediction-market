@@ -27,6 +27,15 @@ function normalizeBooleanSetting(value: string | undefined, fallback: boolean): 
   return fallback
 }
 
+function shouldSilenceLocaleSettingsError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false
+  }
+
+  const digest = 'digest' in error ? String((error as Error & { digest?: string }).digest ?? '') : ''
+  return digest === 'HANGING_PROMISE_REJECTION' || error.message.includes('dynamic "use cache"')
+}
+
 export function getEnabledLocalesFromSettings(settings?: SettingsMap): SupportedLocale[] {
   const rawValue = settings?.[LOCALE_SETTINGS_GROUP]?.[LOCALE_SETTINGS_KEY]?.value
   const parsed = parseEnabledLocales(rawValue)
@@ -34,8 +43,16 @@ export function getEnabledLocalesFromSettings(settings?: SettingsMap): Supported
 }
 
 export async function loadEnabledLocales(): Promise<SupportedLocale[]> {
-  const { data } = await SettingsRepository.getSettings()
-  return getEnabledLocalesFromSettings(data ?? undefined)
+  try {
+    const { data } = await SettingsRepository.getSettings()
+    return getEnabledLocalesFromSettings(data ?? undefined)
+  }
+  catch (error) {
+    if (!shouldSilenceLocaleSettingsError(error)) {
+      console.error('Failed to load enabled locales.', error)
+    }
+    return [DEFAULT_LOCALE]
+  }
 }
 
 export function getAutomaticTranslationsEnabledFromSettings(settings?: SettingsMap): boolean {

@@ -9,11 +9,21 @@ export async function loadPlatformMainTags(locale: SupportedLocale): Promise<Pla
   'use cache'
   cacheTag(cacheTags.mainTags(locale))
 
-  const result = await TagRepository.getMainTags(locale)
+  try {
+    const result = await TagRepository.getMainTags(locale)
 
-  return {
-    ...result,
-    data: result.data ?? [],
-    globalChilds: result.globalChilds ?? [],
+    return {
+      ...result,
+      data: result.data ?? [],
+      globalChilds: result.globalChilds ?? [],
+    }
+  }
+  catch (error) {
+    console.error('Failed to load platform main tags.', error)
+    return {
+      data: [],
+      error: 'Failed to load platform navigation tags.',
+      globalChilds: [],
+    }
   }
 }

@@ -127,8 +127,18 @@ export function getGlobalAnnouncementSettingsFromSettings(settings?: SettingsMap
 }
 
 export async function loadGlobalAnnouncementSettings(): Promise<GlobalAnnouncementSettings> {
-  const { data } = await SettingsRepository.getSettings()
-  return getGlobalAnnouncementSettingsFromSettings(data ?? undefined)
+  try {
+    const { data } = await SettingsRepository.getSettings()
+    return getGlobalAnnouncementSettingsFromSettings(data ?? undefined)
+  }
+  catch (error) {
+    console.error('Failed to load global announcement settings.', error)
+    return {
+      message: '',
+      linkUrl: '',
+      disabledOn: DEFAULT_GLOBAL_ANNOUNCEMENT_DISABLED_ON,
+    }
+  }
 }
 
 export function validateGlobalAnnouncementInput(params: {

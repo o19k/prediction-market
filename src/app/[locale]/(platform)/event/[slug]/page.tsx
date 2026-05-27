@@ -23,10 +23,18 @@ export async function generateMetadata({ params }: PageProps<'/[locale]/event/[s
   if (slug === STATIC_PARAMS_PLACEHOLDER) {
     notFound()
   }
-  return await buildEventPageMetadata({
-    eventSlug: slug,
-    locale: resolvedLocale,
-  })
+  try {
+    return await buildEventPageMetadata({
+      eventSlug: slug,
+      locale: resolvedLocale,
+    })
+  }
+  catch (error) {
+    console.error('Failed to generate event page metadata.', error)
+    return {
+      title: slug.replace(/-/g, ' '),
+    }
+  }
 }
 
 async function CachedEventPageContent({

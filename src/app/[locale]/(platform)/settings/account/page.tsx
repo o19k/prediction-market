@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
 import { getExtracted, setRequestLocale } from 'next-intl/server'
-import { notFound } from 'next/navigation'
+import PlatformAuthRequiredState from '@/app/[locale]/(platform)/_components/PlatformAuthRequiredState'
 import SettingsDeleteAccountContent from '@/app/[locale]/(platform)/settings/_components/SettingsDeleteAccountContent'
 import SettingsTwoFactorAuthContent from '@/app/[locale]/(platform)/settings/_components/SettingsTwoFactorAuthContent'
+import SectionErrorBoundary from '@/components/SectionErrorBoundary'
 import { UserRepository } from '@/lib/db/queries/user'
 
 export async function generateMetadata({ params }: PageProps<'/[locale]/settings/account'>): Promise<Metadata> {
@@ -23,7 +24,12 @@ export default async function AccountSettingsPage({ params }: PageProps<'/[local
 
   const user = await UserRepository.getCurrentUser({ disableCookieCache: true, minimal: true })
   if (!user) {
-    notFound()
+    return (
+      <PlatformAuthRequiredState
+        title={t('Sign in to manage your account.')}
+        description={t('Account security and deletion controls will appear here after you log in again.')}
+      />
+    )
   }
 
   return (
@@ -43,10 +49,20 @@ export default async function AccountSettingsPage({ params }: PageProps<'/[local
               {t('Add an extra layer of security to your account.')}
             </p>
           </div>
-          <SettingsTwoFactorAuthContent user={user} />
+          <SectionErrorBoundary
+            title={t('Two-factor settings are temporarily unavailable.')}
+            description={t('Try again in a moment without leaving this page.')}
+          >
+            <SettingsTwoFactorAuthContent user={user} />
+          </SectionErrorBoundary>
         </section>
 
-        <SettingsDeleteAccountContent />
+        <SectionErrorBoundary
+          title={t('Account deletion controls are temporarily unavailable.')}
+          description={t('Try again in a moment without leaving this page.')}
+        >
+          <SettingsDeleteAccountContent />
+        </SectionErrorBoundary>
       </div>
     </section>
   )

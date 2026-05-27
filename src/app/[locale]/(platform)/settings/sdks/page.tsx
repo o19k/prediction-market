@@ -1,10 +1,12 @@
 import type { Metadata } from 'next'
 import { ArrowRightIcon, BookOpenIcon } from 'lucide-react'
 import { getExtracted, setRequestLocale } from 'next-intl/server'
-import { notFound } from 'next/navigation'
 import { isAddress, zeroAddress } from 'viem'
+import PlatformAuthRequiredState from '@/app/[locale]/(platform)/_components/PlatformAuthRequiredState'
 import SettingsSdkApiKeysContent from '@/app/[locale]/(platform)/settings/_components/SettingsSdkApiKeysContent'
 import SettingsSdkDownloadsContent from '@/app/[locale]/(platform)/settings/_components/SettingsSdkDownloadsContent'
+import RecoverableErrorState from '@/components/RecoverableErrorState'
+import SectionErrorBoundary from '@/components/SectionErrorBoundary'
 import { Button } from '@/components/ui/button'
 import { Link } from '@/i18n/navigation'
 import { addressToBuilderCode } from '@/lib/builder-code'
@@ -13,8 +15,6 @@ import { SettingsRepository } from '@/lib/db/queries/settings'
 import { UserRepository } from '@/lib/db/queries/user'
 import { getBlockedCountriesFromSettings } from '@/lib/geoblock-settings'
 import resolveSiteUrl from '@/lib/site-url'
-
-const SDK_DOWNLOAD_URL = process.env.SDK_DOWNLOAD_URL!
 
 export async function generateMetadata({ params }: PageProps<'/[locale]/settings/sdks'>): Promise<Metadata> {
   const { locale } = await params
@@ -34,7 +34,22 @@ export default async function SdkDownloadsSettingsPage({ params }: PageProps<'/[
 
   const user = await UserRepository.getCurrentUser({ disableCookieCache: true, minimal: true })
   if (!user) {
-    notFound()
+    return (
+      <PlatformAuthRequiredState
+        title={t('Sign in to access SDK downloads.')}
+        description={t('Your personalized SDK bundles and API keys will be available here after you log in again.')}
+      />
+    )
+  }
+
+  const sdkDownloadUrl = process.env.SDK_DOWNLOAD_URL?.trim()
+  if (!sdkDownloadUrl) {
+    return (
+      <RecoverableErrorState
+        title={t('SDK downloads are temporarily unavailable.')}
+        description={t('The download service is not configured right now. Please try again later.')}
+      />
+    )
   }
 
   const { data: allSettings } = await SettingsRepository.getSettings()
@@ -48,7 +63,7 @@ export default async function SdkDownloadsSettingsPage({ params }: PageProps<'/[
   const geoblock = getBlockedCountriesFromSettings(allSettings ?? undefined).length > 0
 
   function buildDownloadUrl(language: 'python' | 'rust' | 'typescript', sdk: 'clob' | 'relayer') {
-    const url = new URL('/download', SDK_DOWNLOAD_URL)
+    const url = new URL('/download', sdkDownloadUrl)
     url.searchParams.set('sdk', sdk)
     url.searchParams.set('language', language)
     url.searchParams.set('site_url', siteUrl)
@@ -71,74 +86,84 @@ export default async function SdkDownloadsSettingsPage({ params }: PageProps<'/[
       </div>
 
       <div className="mx-auto w-full max-w-5xl lg:mx-0">
-        <SettingsSdkDownloadsContent
-          generatingLabel={t('Generating...')}
-          cards={[
-            {
-              id: 'python-client',
-              title: t('Python Client'),
-              description: t('CLOB and relayer bundles for Python bots and services.'),
-              logoSrc: '/images/sdks/python.svg',
-              actions: [
-                {
-                  id: 'python-clob',
-                  label: t('CLOB'),
-                  href: buildDownloadUrl('python', 'clob'),
-                  variant: 'default',
-                },
-                {
-                  id: 'python-relayer',
-                  label: t('Relayer'),
-                  href: buildDownloadUrl('python', 'relayer'),
-                  variant: 'outline',
-                },
-              ],
-            },
-            {
-              id: 'rust-client',
-              title: t('Rust Client'),
-              description: t('CLOB and relayer bundles for Rust services and automations.'),
-              logoSrc: '/images/sdks/rust.svg',
-              actions: [
-                {
-                  id: 'rust-clob',
-                  label: t('CLOB'),
-                  href: buildDownloadUrl('rust', 'clob'),
-                  variant: 'default',
-                },
-                {
-                  id: 'rust-relayer',
-                  label: t('Relayer'),
-                  href: buildDownloadUrl('rust', 'relayer'),
-                  variant: 'outline',
-                },
-              ],
-            },
-            {
-              id: 'typescript-client',
-              title: t('TypeScript Client'),
-              description: t('CLOB and relayer bundles for web apps, bots, and Node.js services.'),
-              logoSrc: '/images/sdks/typescript.svg',
-              actions: [
-                {
-                  id: 'typescript-clob',
-                  label: t('CLOB'),
-                  href: buildDownloadUrl('typescript', 'clob'),
-                  variant: 'default',
-                },
-                {
-                  id: 'typescript-relayer',
-                  label: t('Relayer'),
-                  href: buildDownloadUrl('typescript', 'relayer'),
-                  variant: 'outline',
-                },
-              ],
-            },
-          ]}
-        />
+        <SectionErrorBoundary
+          title={t('SDK downloads are temporarily unavailable.')}
+          description={t('Try again in a moment without leaving this page.')}
+        >
+          <SettingsSdkDownloadsContent
+            generatingLabel={t('Generating...')}
+            cards={[
+              {
+                id: 'python-client',
+                title: t('Python Client'),
+                description: t('CLOB and relayer bundles for Python bots and services.'),
+                logoSrc: '/images/sdks/python.svg',
+                actions: [
+                  {
+                    id: 'python-clob',
+                    label: t('CLOB'),
+                    href: buildDownloadUrl('python', 'clob'),
+                    variant: 'default',
+                  },
+                  {
+                    id: 'python-relayer',
+                    label: t('Relayer'),
+                    href: buildDownloadUrl('python', 'relayer'),
+                    variant: 'outline',
+                  },
+                ],
+              },
+              {
+                id: 'rust-client',
+                title: t('Rust Client'),
+                description: t('CLOB and relayer bundles for Rust services and automations.'),
+                logoSrc: '/images/sdks/rust.svg',
+                actions: [
+                  {
+                    id: 'rust-clob',
+                    label: t('CLOB'),
+                    href: buildDownloadUrl('rust', 'clob'),
+                    variant: 'default',
+                  },
+                  {
+                    id: 'rust-relayer',
+                    label: t('Relayer'),
+                    href: buildDownloadUrl('rust', 'relayer'),
+                    variant: 'outline',
+                  },
+                ],
+              },
+              {
+                id: 'typescript-client',
+                title: t('TypeScript Client'),
+                description: t('CLOB and relayer bundles for web apps, bots, and Node.js services.'),
+                logoSrc: '/images/sdks/typescript.svg',
+                actions: [
+                  {
+                    id: 'typescript-clob',
+                    label: t('CLOB'),
+                    href: buildDownloadUrl('typescript', 'clob'),
+                    variant: 'default',
+                  },
+                  {
+                    id: 'typescript-relayer',
+                    label: t('Relayer'),
+                    href: buildDownloadUrl('typescript', 'relayer'),
+                    variant: 'outline',
+                  },
+                ],
+              },
+            ]}
+          />
+        </SectionErrorBoundary>
       </div>
 
-      <SettingsSdkApiKeysContent />
+      <SectionErrorBoundary
+        title={t('SDK API keys are temporarily unavailable.')}
+        description={t('Try again in a moment without leaving this page.')}
+      >
+        <SettingsSdkApiKeysContent />
+      </SectionErrorBoundary>
 
       <div className="
         mx-auto flex w-full max-w-5xl flex-col gap-4 rounded-lg border bg-card p-4

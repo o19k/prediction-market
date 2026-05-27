@@ -804,89 +804,95 @@ export async function loadRuntimeThemeState(): Promise<RuntimeThemeState> {
   cacheTag(cacheTags.settings)
 
   const defaults = buildDefaultThemeState()
-  const { data: allSettings, error } = await SettingsRepository.getSettings()
+  try {
+    const { data: allSettings, error } = await SettingsRepository.getSettings()
 
-  if (error) {
-    return defaults
+    if (error) {
+      return defaults
+    }
+
+    const themeSettings = getThemeSettingsGroup(allSettings ?? undefined)
+    const generalSettings = getGeneralSettingsGroup(allSettings ?? undefined)
+    const hasTheme = hasStoredThemeSettings(themeSettings)
+    const hasSite = hasStoredThemeSiteSettings(generalSettings)
+
+    const normalizedTheme = hasTheme
+      ? normalizeThemeConfig({
+          presetValue: themeSettings?.[THEME_PRESET_KEY]?.value,
+          radiusValue: themeSettings?.[THEME_RADIUS_KEY]?.value,
+          lightJsonValue: themeSettings?.[THEME_LIGHT_JSON_KEY]?.value,
+          darkJsonValue: themeSettings?.[THEME_DARK_JSON_KEY]?.value,
+          presetErrorLabel: 'Theme preset in settings',
+          radiusErrorLabel: 'Theme radius in settings',
+          lightErrorLabel: 'Theme light_json in settings',
+          darkErrorLabel: 'Theme dark_json in settings',
+        })
+      : null
+
+    const normalizedSite = hasSite
+      ? normalizeThemeSiteConfig({
+          siteNameValue: generalSettings?.[THEME_SITE_NAME_KEY]?.value,
+          siteDescriptionValue: generalSettings?.[THEME_SITE_DESCRIPTION_KEY]?.value,
+          logoModeValue: generalSettings?.[THEME_SITE_LOGO_MODE_KEY]?.value,
+          logoSvgValue: generalSettings?.[THEME_SITE_LOGO_SVG_KEY]?.value,
+          logoImagePathValue: generalSettings?.[THEME_SITE_LOGO_IMAGE_PATH_KEY]?.value,
+          pwaIcon192PathValue: generalSettings?.[GENERAL_PWA_ICON_192_PATH_KEY]?.value,
+          pwaIcon512PathValue: generalSettings?.[GENERAL_PWA_ICON_512_PATH_KEY]?.value,
+          googleAnalyticsIdValue: generalSettings?.[THEME_SITE_GOOGLE_ANALYTICS_KEY]?.value,
+          discordLinkValue: generalSettings?.[THEME_SITE_DISCORD_LINK_KEY]?.value,
+          twitterLinkValue: generalSettings?.[THEME_SITE_TWITTER_LINK_KEY]?.value,
+          facebookLinkValue: generalSettings?.[THEME_SITE_FACEBOOK_LINK_KEY]?.value,
+          instagramLinkValue: generalSettings?.[THEME_SITE_INSTAGRAM_LINK_KEY]?.value,
+          tiktokLinkValue: generalSettings?.[THEME_SITE_TIKTOK_LINK_KEY]?.value,
+          linkedinLinkValue: generalSettings?.[THEME_SITE_LINKEDIN_LINK_KEY]?.value,
+          youtubeLinkValue: generalSettings?.[THEME_SITE_YOUTUBE_LINK_KEY]?.value,
+          supportUrlValue: generalSettings?.[THEME_SITE_SUPPORT_URL_KEY]?.value,
+          customJavascriptCodesJsonValue: generalSettings?.[THEME_SITE_CUSTOM_JAVASCRIPT_CODES_KEY]?.value,
+          feeRecipientWalletValue:
+            generalSettings?.[GENERAL_FEE_RECIPIENT_WALLET_KEY]?.value ?? DEFAULT_FEE_RECEIVER_WALLET_ADDRESS,
+          siteNameErrorLabel: 'Site name in settings',
+          siteDescriptionErrorLabel: 'Site description in settings',
+          logoModeErrorLabel: 'Logo mode in settings',
+          logoSvgErrorLabel: 'Logo SVG in settings',
+          logoImagePathErrorLabel: 'Logo image path in settings',
+          pwaIcon192PathErrorLabel: 'PWA icon (192x192) in settings',
+          pwaIcon512PathErrorLabel: 'PWA icon (512x512) in settings',
+          googleAnalyticsIdErrorLabel: 'Google Analytics ID in settings',
+          discordLinkErrorLabel: 'Discord link in settings',
+          twitterLinkErrorLabel: 'Twitter link in settings',
+          facebookLinkErrorLabel: 'Facebook link in settings',
+          instagramLinkErrorLabel: 'Instagram link in settings',
+          tiktokLinkErrorLabel: 'TikTok link in settings',
+          linkedinLinkErrorLabel: 'LinkedIn link in settings',
+          youtubeLinkErrorLabel: 'YouTube link in settings',
+          supportUrlErrorLabel: 'Support URL in settings',
+          customJavascriptCodesErrorLabel: 'Custom javascript code in settings',
+          feeRecipientWalletErrorLabel: 'Fee recipient wallet in settings',
+        })
+      : null
+
+    const theme = normalizedTheme?.data
+      ? buildResolvedThemeConfig(
+          normalizedTheme.data.presetId,
+          normalizedTheme.data.lightOverrides,
+          normalizedTheme.data.darkOverrides,
+          normalizedTheme.data.radius,
+        )
+      : defaults.theme
+
+    const site = normalizedSite?.data
+      ? buildThemeSiteIdentity(normalizedSite.data)
+      : defaults.site
+
+    return {
+      theme,
+      site,
+      source: normalizedTheme?.data || normalizedSite?.data ? 'settings' : 'default',
+    }
   }
-
-  const themeSettings = getThemeSettingsGroup(allSettings ?? undefined)
-  const generalSettings = getGeneralSettingsGroup(allSettings ?? undefined)
-  const hasTheme = hasStoredThemeSettings(themeSettings)
-  const hasSite = hasStoredThemeSiteSettings(generalSettings)
-
-  const normalizedTheme = hasTheme
-    ? normalizeThemeConfig({
-        presetValue: themeSettings?.[THEME_PRESET_KEY]?.value,
-        radiusValue: themeSettings?.[THEME_RADIUS_KEY]?.value,
-        lightJsonValue: themeSettings?.[THEME_LIGHT_JSON_KEY]?.value,
-        darkJsonValue: themeSettings?.[THEME_DARK_JSON_KEY]?.value,
-        presetErrorLabel: 'Theme preset in settings',
-        radiusErrorLabel: 'Theme radius in settings',
-        lightErrorLabel: 'Theme light_json in settings',
-        darkErrorLabel: 'Theme dark_json in settings',
-      })
-    : null
-
-  const normalizedSite = hasSite
-    ? normalizeThemeSiteConfig({
-        siteNameValue: generalSettings?.[THEME_SITE_NAME_KEY]?.value,
-        siteDescriptionValue: generalSettings?.[THEME_SITE_DESCRIPTION_KEY]?.value,
-        logoModeValue: generalSettings?.[THEME_SITE_LOGO_MODE_KEY]?.value,
-        logoSvgValue: generalSettings?.[THEME_SITE_LOGO_SVG_KEY]?.value,
-        logoImagePathValue: generalSettings?.[THEME_SITE_LOGO_IMAGE_PATH_KEY]?.value,
-        pwaIcon192PathValue: generalSettings?.[GENERAL_PWA_ICON_192_PATH_KEY]?.value,
-        pwaIcon512PathValue: generalSettings?.[GENERAL_PWA_ICON_512_PATH_KEY]?.value,
-        googleAnalyticsIdValue: generalSettings?.[THEME_SITE_GOOGLE_ANALYTICS_KEY]?.value,
-        discordLinkValue: generalSettings?.[THEME_SITE_DISCORD_LINK_KEY]?.value,
-        twitterLinkValue: generalSettings?.[THEME_SITE_TWITTER_LINK_KEY]?.value,
-        facebookLinkValue: generalSettings?.[THEME_SITE_FACEBOOK_LINK_KEY]?.value,
-        instagramLinkValue: generalSettings?.[THEME_SITE_INSTAGRAM_LINK_KEY]?.value,
-        tiktokLinkValue: generalSettings?.[THEME_SITE_TIKTOK_LINK_KEY]?.value,
-        linkedinLinkValue: generalSettings?.[THEME_SITE_LINKEDIN_LINK_KEY]?.value,
-        youtubeLinkValue: generalSettings?.[THEME_SITE_YOUTUBE_LINK_KEY]?.value,
-        supportUrlValue: generalSettings?.[THEME_SITE_SUPPORT_URL_KEY]?.value,
-        customJavascriptCodesJsonValue: generalSettings?.[THEME_SITE_CUSTOM_JAVASCRIPT_CODES_KEY]?.value,
-        feeRecipientWalletValue:
-          generalSettings?.[GENERAL_FEE_RECIPIENT_WALLET_KEY]?.value ?? DEFAULT_FEE_RECEIVER_WALLET_ADDRESS,
-        siteNameErrorLabel: 'Site name in settings',
-        siteDescriptionErrorLabel: 'Site description in settings',
-        logoModeErrorLabel: 'Logo mode in settings',
-        logoSvgErrorLabel: 'Logo SVG in settings',
-        logoImagePathErrorLabel: 'Logo image path in settings',
-        pwaIcon192PathErrorLabel: 'PWA icon (192x192) in settings',
-        pwaIcon512PathErrorLabel: 'PWA icon (512x512) in settings',
-        googleAnalyticsIdErrorLabel: 'Google Analytics ID in settings',
-        discordLinkErrorLabel: 'Discord link in settings',
-        twitterLinkErrorLabel: 'Twitter link in settings',
-        facebookLinkErrorLabel: 'Facebook link in settings',
-        instagramLinkErrorLabel: 'Instagram link in settings',
-        tiktokLinkErrorLabel: 'TikTok link in settings',
-        linkedinLinkErrorLabel: 'LinkedIn link in settings',
-        youtubeLinkErrorLabel: 'YouTube link in settings',
-        supportUrlErrorLabel: 'Support URL in settings',
-        customJavascriptCodesErrorLabel: 'Custom javascript code in settings',
-        feeRecipientWalletErrorLabel: 'Fee recipient wallet in settings',
-      })
-    : null
-
-  const theme = normalizedTheme?.data
-    ? buildResolvedThemeConfig(
-        normalizedTheme.data.presetId,
-        normalizedTheme.data.lightOverrides,
-        normalizedTheme.data.darkOverrides,
-        normalizedTheme.data.radius,
-      )
-    : defaults.theme
-
-  const site = normalizedSite?.data
-    ? buildThemeSiteIdentity(normalizedSite.data)
-    : defaults.site
-
-  return {
-    theme,
-    site,
-    source: normalizedTheme?.data || normalizedSite?.data ? 'settings' : 'default',
+  catch (error) {
+    console.error('Failed to load runtime theme state.', error)
+    return defaults
   }
 }
 

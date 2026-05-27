@@ -19,6 +19,7 @@ import {
   toResolutionTimelineOutcome,
 } from '@/app/[locale]/(platform)/event/[slug]/_utils/eventResolvedOutcome'
 import { shouldDisplayResolutionTimeline } from '@/app/[locale]/(platform)/event/[slug]/_utils/resolution-timeline-builder'
+import SectionErrorBoundary from '@/components/SectionErrorBoundary'
 import { cn } from '@/lib/utils'
 
 interface EventContentProps {
@@ -82,47 +83,72 @@ export default function EventContent({
           <EventHeader event={event} />
 
           <div className={cn(shouldHideChart ? 'w-full' : 'min-h-96 w-full')}>
-            <EventChartSection
-              event={event}
-              seriesEvents={seriesEvents}
-              liveChartConfig={liveChartConfig}
-            />
+            <SectionErrorBoundary
+              title="Chart unavailable"
+              description="The market chart hit a temporary error. Try again without leaving this page."
+            >
+              <EventChartSection
+                event={event}
+                seriesEvents={seriesEvents}
+                liveChartConfig={liveChartConfig}
+              />
+            </SectionErrorBoundary>
           </div>
 
-          <div className="grid gap-6">
-            <EventMarketsSection event={event} liveChartConfig={liveChartConfig} />
-            <EventMarketContextSlot enabled={marketContextEnabled} event={event} />
-            <EventRules event={event} />
-            {event.total_markets_count === 1
-              && singleMarket
-              && shouldDisplayResolutionTimeline(singleMarket) && (
-              <div className="rounded-xl border bg-background p-4">
-                <ResolutionTimelinePanel
-                  market={singleMarket}
-                  settledUrl={null}
-                  outcomeOverride={selectedMarketTimelineOutcome}
-                  showLink={false}
-                />
-              </div>
-            )}
-          </div>
+          <SectionErrorBoundary
+            title="Market details unavailable"
+            description="Some event details hit a temporary error. Try again without leaving this page."
+          >
+            <div className="grid gap-6">
+              <EventMarketsSection event={event} liveChartConfig={liveChartConfig} />
+              <EventMarketContextSlot enabled={marketContextEnabled} event={event} />
+              <EventRules event={event} />
+              {event.total_markets_count === 1
+                && singleMarket
+                && shouldDisplayResolutionTimeline(singleMarket) && (
+                <div className="rounded-xl border bg-background p-4">
+                  <ResolutionTimelinePanel
+                    market={singleMarket}
+                    settledUrl={null}
+                    outcomeOverride={selectedMarketTimelineOutcome}
+                    showLink={false}
+                  />
+                </div>
+              )}
+            </div>
+          </SectionErrorBoundary>
 
           <EventRelatedSlot event={event} placement="mobile" />
-          <EventTabsSection event={event} faqItems={faqItems} />
+          <SectionErrorBoundary
+            title="Activity and positions unavailable"
+            description="The event activity, comments, or positions tabs hit a temporary error. Try again without leaving this page."
+          >
+            <EventTabsSection event={event} faqItems={faqItems} />
+          </SectionErrorBoundary>
         </div>
       </div>
 
-      <EventDesktopSidebar
-        event={event}
-        initialMarket={initialMarket}
-        initialOutcome={initialOutcome}
-      />
+      <SectionErrorBoundary
+        title="Trade panel unavailable"
+        description="The trade panel hit a temporary error. Try again without leaving this page."
+      >
+        <EventDesktopSidebar
+          event={event}
+          initialMarket={initialMarket}
+          initialOutcome={initialOutcome}
+        />
+      </SectionErrorBoundary>
       <EventBackToTopButton />
-      <EventMobileOrderPanelSlot
-        event={event}
-        initialMarket={initialMarket}
-        initialOutcome={initialOutcome}
-      />
+      <SectionErrorBoundary
+        title="Mobile trade panel unavailable"
+        description="The mobile trade panel hit a temporary error. Try again without leaving this page."
+      >
+        <EventMobileOrderPanelSlot
+          event={event}
+          initialMarket={initialMarket}
+          initialOutcome={initialOutcome}
+        />
+      </SectionErrorBoundary>
     </EventMarketChannelProvider>
   )
 }

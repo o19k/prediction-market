@@ -172,7 +172,8 @@ function executeCustomJavascriptCodes(codes: CustomJavascriptCodeConfig[]) {
         scriptElement.remove()
       }
 
-      throw error
+      console.error(`Failed to execute custom javascript code "${code.name}".`, error)
+      continue
     }
 
     executionRegistry.add(executionKey)
