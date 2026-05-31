@@ -1,11 +1,13 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import type { Event } from '@/types'
-import { LinkIcon } from 'lucide-react'
+import { BadgeInfoIcon, LinkIcon } from 'lucide-react'
 import { useExtracted, useLocale } from 'next-intl'
 import Image from 'next/image'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
 import { useSiteIdentity } from '@/hooks/useSiteIdentity'
 import {
   UMA_CTF_ADAPTER_ADDRESS,
@@ -58,16 +60,85 @@ function normalizeRulesLabelWhitespace(value: string) {
   return value.replace(RULES_LABEL_WHITESPACE_REGEX, ' ').trim()
 }
 
-function useExpandedState() {
-  const [isExpanded, setIsExpanded] = useState(false)
+function useExpandedState(initialExpanded: boolean) {
+  const [isExpanded, setIsExpanded] = useState(initialExpanded)
   return { isExpanded, setIsExpanded }
+}
+
+function AccordionRulesPanel({
+  children,
+  initialExpanded,
+  title,
+}: {
+  children: ReactNode
+  initialExpanded: boolean
+  title: string
+}) {
+  const { isExpanded, setIsExpanded } = useExpandedState(initialExpanded)
+
+  return (
+    <section className="overflow-hidden rounded-xl border transition-all duration-500 ease-in-out">
+      <button
+        type="button"
+        onClick={() => setIsExpanded(!isExpanded)}
+        className={cn(
+          `
+            flex h-18 w-full items-center justify-between p-4 text-left transition-colors
+            hover:bg-muted/50
+            focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
+            focus-visible:ring-offset-background focus-visible:outline-none
+          `,
+        )}
+        aria-expanded={isExpanded}
+      >
+        <h3 className="text-base font-medium">{title}</h3>
+        <span
+          aria-hidden="true"
+          className="pointer-events-none flex size-8 items-center justify-center"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className={cn('size-6 text-muted-foreground transition-transform', { 'rotate-180': isExpanded })}
+          >
+            <path
+              d="M4 6L8 10L12 6"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
+      </button>
+
+      <div
+        className={cn(`
+          grid overflow-hidden transition-all duration-500 ease-in-out
+          ${isExpanded
+      ? 'pointer-events-auto grid-rows-[1fr] opacity-100'
+      : 'pointer-events-none grid-rows-[0fr] opacity-0'}
+        `)}
+        aria-hidden={!isExpanded}
+      >
+        <div
+          className={cn('min-h-0 overflow-hidden', { 'border-t border-border/30': isExpanded })}
+        >
+          {children}
+        </div>
+      </div>
+    </section>
+  )
 }
 
 export default function EventRules({ event, mode = 'accordion', showEndDate = false }: EventRulesProps) {
   const t = useExtracted()
   const locale = useLocale()
   const siteIdentity = useSiteIdentity()
-  const { isExpanded, setIsExpanded } = useExpandedState()
+  const hasAdditionalContext = typeof event.additional_context === 'string' && event.additional_context.trim().length > 0
   const isInline = mode === 'inline'
 
   function formatRules(rules: string): string {
@@ -132,6 +203,23 @@ export default function EventRules({ event, mode = 'accordion', showEndDate = fa
       month: 'short',
       day: 'numeric',
       year: 'numeric',
+      timeZone: 'UTC',
+    }).format(date)
+  }
+
+  function formatAdditionalContextUpdatedAt(value: string | null | undefined): string | null {
+    if (!value) {
+      return null
+    }
+
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) {
+      return null
+    }
+
+    return new Intl.DateTimeFormat(EVENT_RULES_TIMESTAMP_LOCALE, {
+      month: 'short',
+      day: 'numeric',
       timeZone: 'UTC',
     }).format(date)
   }
@@ -212,6 +300,10 @@ export default function EventRules({ event, mode = 'accordion', showEndDate = fa
   const resolverBadgeClassName = isUmaResolver
     ? 'bg-transparent'
     : `bg-linear-to-r ${resolverGradient}`
+  const additionalContext = hasAdditionalContext ? event.additional_context?.trim() ?? '' : ''
+  const additionalContextUpdatedAtLabel = formatAdditionalContextUpdatedAt(
+    event.additional_context_updated_at ?? event.updated_at,
+  )
 
   const resolverDetails = (
     <div className="flex items-start gap-3">
@@ -302,6 +394,31 @@ export default function EventRules({ event, mode = 'accordion', showEndDate = fa
 
   const content = (
     <div className={cn('space-y-2', { 'p-3': !isInline })}>
+      {additionalContext && (
+        <section className="overflow-hidden rounded-xl border bg-card">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-4 py-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <BadgeInfoIcon aria-hidden="true" className="size-5 shrink-0 fill-primary/12 text-primary" />
+              <p className="text-base font-medium text-foreground">
+                {t({ id: 'eventRulesAdditionalContext', message: 'Additional context' })}
+              </p>
+            </div>
+            {additionalContextUpdatedAtLabel && (
+              <p className="text-sm text-muted-foreground sm:ml-auto">
+                {t({ id: 'eventRulesUpdated', message: 'Updated' })}
+                {' '}
+                {additionalContextUpdatedAtLabel}
+              </p>
+            )}
+          </div>
+          <Separator />
+          <div className="p-4">
+            <p className="text-sm/relaxed whitespace-pre-line text-muted-foreground">
+              {additionalContext}
+            </p>
+          </div>
+        </section>
+      )}
       {formattedRules && (
         <div className="text-sm/relaxed whitespace-pre-line text-foreground">
           {renderRulesTextWithLinks(formattedRules)}
@@ -354,59 +471,12 @@ export default function EventRules({ event, mode = 'accordion', showEndDate = fa
   }
 
   return (
-    <section className="overflow-hidden rounded-xl border transition-all duration-500 ease-in-out">
-      <button
-        type="button"
-        onClick={() => setIsExpanded(!isExpanded)}
-        className={cn(
-          `
-            flex h-18 w-full items-center justify-between p-4 text-left transition-colors
-            hover:bg-muted/50
-            focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
-            focus-visible:ring-offset-background focus-visible:outline-none
-          `,
-        )}
-        aria-expanded={isExpanded}
-      >
-        <h3 className="text-base font-medium">{t('Rules')}</h3>
-        <span
-          aria-hidden="true"
-          className="pointer-events-none flex size-8 items-center justify-center"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className={cn('size-6 text-muted-foreground transition-transform', { 'rotate-180': isExpanded })}
-          >
-            <path
-              d="M4 6L8 10L12 6"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </span>
-      </button>
-
-      <div
-        className={cn(`
-          grid overflow-hidden transition-all duration-500 ease-in-out
-          ${isExpanded
-      ? 'pointer-events-auto grid-rows-[1fr] opacity-100'
-      : 'pointer-events-none grid-rows-[0fr] opacity-0'}
-        `)}
-        aria-hidden={!isExpanded}
-      >
-        <div
-          className={cn('min-h-0 overflow-hidden', { 'border-t border-border/30': isExpanded })}
-        >
-          {content}
-        </div>
-      </div>
-    </section>
+    <AccordionRulesPanel
+      key={`${event.id}:${hasAdditionalContext ? 'with-context' : 'without-context'}`}
+      initialExpanded={hasAdditionalContext}
+      title={t('Rules')}
+    >
+      {content}
+    </AccordionRulesPanel>
   )
 }
