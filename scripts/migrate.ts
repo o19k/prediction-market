@@ -143,8 +143,7 @@ function rewriteMigrationSqlForMode(migrationSql: string, isSupabase: boolean): 
   }
 
   return migrationSql
-    .replace(/\bTO\s+"service_role"\b/gi, 'TO CURRENT_USER')
-    .replace(/\bTO\s+service_role\b/gi, 'TO CURRENT_USER')
+    .replace(/\bTO\s+(?:"service_role"|service_role\b)/gi, 'TO CURRENT_USER')
 }
 
 async function withReservedTransaction<T>(
