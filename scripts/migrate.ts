@@ -15,6 +15,7 @@ let fs: NodeFs
 let path: NodePath
 let postgres: Postgres
 let resolveSiteUrl: ResolveSiteUrl
+let scriptDirname: string
 
 interface SyncCronOptions {
   jobName: string
@@ -40,9 +41,10 @@ interface CronExtensionCapabilities {
 }
 
 async function loadScriptDependencies(): Promise<void> {
-  const [fsModule, pathModule, postgresModule, siteUrlModule] = await Promise.all([
+  const [fsModule, pathModule, urlModule, postgresModule, siteUrlModule] = await Promise.all([
     import('node:fs'),
     import('node:path'),
+    import('node:url'),
     import('postgres'),
     import(SITE_URL_MODULE_PATH),
   ])
@@ -55,6 +57,7 @@ async function loadScriptDependencies(): Promise<void> {
   fs = fsModule
   path = pathModule
   postgres = postgresImport.default ?? postgresImport
+  scriptDirname = path.dirname(urlModule.fileURLToPath(import.meta.url))
   const importedResolveSiteUrl = siteUrlImport.default ?? siteUrlImport.resolveSiteUrl
 
   if (!importedResolveSiteUrl) {
@@ -193,7 +196,7 @@ async function applyMigrations(sql: ReservedSql, isSupabase: boolean): Promise<v
   `, []).simple()
   console.log('Migrations table ready')
 
-  const migrationsDir = path.join(__dirname, '../src/lib/db/migrations')
+  const migrationsDir = path.join(scriptDirname, '../src/lib/db/migrations')
   const migrationFiles = fs.readdirSync(migrationsDir)
     .filter(file => file.endsWith('.sql'))
     .sort()
