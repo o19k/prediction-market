@@ -9,7 +9,7 @@ import { UserRepository } from '@/lib/db/queries/user'
 import { validateOutboundImageUrl } from '@/lib/og-image-security'
 import { uploadPublicAsset } from '@/lib/storage'
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024
+const MAX_FILE_SIZE = 2 * 1024 * 1024
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 
 export interface ActionState {
@@ -50,7 +50,7 @@ const UpdateUserSchema = z.object({
       }
 
       return file.size <= MAX_FILE_SIZE
-    }, { error: 'Image must be less than 5MB' })
+    }, { error: 'Image must be less than 2MB' })
     .refine((file) => {
       if (!file || file.size === 0) {
         return true
